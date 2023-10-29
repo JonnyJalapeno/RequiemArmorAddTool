@@ -16,6 +16,8 @@ using static Mutagen.Bethesda.Skyrim.Furniture;
 using System.Globalization;
 using Mutagen.Bethesda.Skyrim.Assets;
 using System.Security.Cryptography;
+using Mutagen.Bethesda.Strings;
+using System.Reflection.Metadata.Ecma335;
 
 namespace RequiemArmorAddTool
 {
@@ -234,34 +236,54 @@ namespace RequiemArmorAddTool
         public static List<ArmorEnchantments> FillEnchantments(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             List<ArmorEnchantments> armList = new List<ArmorEnchantments>();
-            foreach (var armor in state.LoadOrder.PriorityOrder.Armor().WinningOverrides()){ 
-                if(armor != null && armor.TemplateArmor != null)
+            foreach (var armor in state.LoadOrder.PriorityOrder.Armor().WinningOverrides()){
+                if (armor != null && !armor.TemplateArmor.IsNull && armor.EditorID != null && !armor.EditorID.Contains("NULL"))
                 {
                     ArmorValues? armval = CheckArmorValues(state, armor);
                     if(armval != null)
                     {                            
                         armor.ObjectEffect.TryResolve<IObjectEffectGetter>(state.LinkCache, out var name);
-                        if(name != null && name.EditorID != null && name.EditorID.Contains("Ench") && name.Name != null && name.Name.String != null) {
-                            ArmorEnchantments armench = new ArmorEnchantments(armval.BodyPart, armval.ArmorClass, armval.ArmorMaterial, armval.ArmorValue,armval.FormKey, name.EditorID, name.FormKey, name.Name.String);
-                            string min = name.EditorID.Substring(name.EditorID.Length - 1);
-                            if (min == "1" || min == "2" || min == "3" || min == "4" || min == "5" || min == "6")
-                            {
-                                short min2 = short.Parse(min);
-                                armench.EnchLvl = min2;
-                            }
-                            else {
-                                continue;
-                            }
-                            if (armList.Count == 0)
-                            {
-                                armList.Add(armench);
-                            }
-                            else {
-                                var test = armList.Where(x => x.BodyPart == armench.BodyPart && x.ArmorClass == armench.ArmorClass && x.ArmorMaterial == armench.ArmorMaterial && x.Enchantment == armench.Enchantment && x.EnchLvl == armench.EnchLvl).SingleOrDefault();
-                                if (test == null) {
-                                    armList.Add(armench);
-                                } 
-                            }
+                        if(name != null && name.EditorID != null && name.EditorID.Contains("Ench") && name.Name != null && name.Name.String != null) {      
+                            armor.TemplateArmor.TryResolve<IArmorGetter>(state.LinkCache, out var tmpltarmor);
+                            if (tmpltarmor != null && tmpltarmor.Name != null) {
+                                    
+                                string min = name.EditorID.Substring(name.EditorID.Length - 1);
+                                if (min == "1" || min == "2" || min == "3" || min == "4" || min == "5" || min == "6")
+                                {
+                                    TranslatedString rr = new TranslatedString(Language.English);
+                                    rr = tmpltarmor.Name.String;
+                                    TranslatedString ee = new TranslatedString(Language.English);
+                                    if(armor.Name != null)
+                                    {
+                                        ee = armor.Name.String;
+                                    }
+                                    int length = rr.ToString().Length;
+                                    if (length > ee.ToString().Length) {
+                                        continue;
+                                    }
+                                    string? dd = ee.ToString().Substring(length);
+                                    ArmorEnchantments armench = new ArmorEnchantments(armval.BodyPart, armval.ArmorClass, armval.ArmorMaterial, armval.ArmorValue, armval.FormKey, name.EditorID, name.FormKey, dd);
+                                    short min2 = short.Parse(min);
+                                    armench.EnchLvl = min2;
+                                    if (armList.Count == 0)
+                                    {
+                                        armList.Add(armench);
+                                    }
+                                    else
+                                    {
+                                        var test = armList.Where(x => x.BodyPart == armench.BodyPart && x.ArmorClass == armench.ArmorClass && x.ArmorMaterial == armench.ArmorMaterial && x.Enchantment == armench.Enchantment && x.EnchLvl == armench.EnchLvl).SingleOrDefault();
+                                        if (test == null)
+                                        {
+                                            armList.Add(armench);
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    continue;
+                                }   
+                            } 
+                                                    
                         }   
                     }
                 }
@@ -317,7 +339,20 @@ namespace RequiemArmorAddTool
             LeveledItemEntry lvlEnt = new LeveledItemEntry();
             lvlData.Level = 1;
             lvlData.Reference.SetTo(armvalues.FormKey);
-            
+
+            var lvlin2 = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID != null && x.EditorID.Contains(armvalues.BodyPart) && x.EditorID.Contains(armvalues.ArmorClass) && !x.EditorID.Contains("1") && !x.EditorID.Contains("2") && !x.EditorID.Contains("3") && !x.EditorID.Contains("4") && !x.EditorID.Contains("5") && !x.EditorID.Contains("6") && !x.EditorID.Contains("Ench") && !x.EditorID.Contains("Imperial"));
+            foreach (var itm in lvlin2) {
+                var ll = itm.DeepCopy();
+                LeveledItemEntryData lld = new LeveledItemEntryData();
+                lld.Count = 1;
+                lld.Level = 1;
+                lld.Reference.FormKey = armvalues.FormKey;
+                LeveledItemEntry lle = new LeveledItemEntry();
+                lle.Data = lld;
+                ll.Entries?.Add(lle);
+                state.PatchMod.LeveledItems.Set(ll);
+            }
+
 
             for (int i = 1; i <= 6; i++)
             {
@@ -377,74 +412,56 @@ namespace RequiemArmorAddTool
 
         public static void AddToEnchantedLists(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, List<ArmorEnchantments> enchList, ArmorValues armval, IArmorGetter armor) { 
                 
-                List<ArmorEnchantments> result = enchList.Where(x=>x.BodyPart == armval.BodyPart && x.ArmorClass == armval.ArmorClass && x.ArmorMaterial == armval.ArmorMaterial).ToList();
+            List<ArmorEnchantments> result = enchList.Where(x=>x.BodyPart == armval.BodyPart && x.ArmorClass == armval.ArmorClass && x.ArmorMaterial == armval.ArmorMaterial).ToList();
+            List<LeveledItem> enchantLists = new List<LeveledItem>();
             foreach(var itm in result)
             {
-                if (armor != null)
+                if (armor.ObjectEffect.IsNull)
                 {
-                    var armornew = armor.DeepCopy();
-                    armornew.EditorID = armor.EditorID + " " + itm.Enchantment;
-                    armornew.Name = (Mutagen.Bethesda.Strings.TranslatedString?)armor.Name+" "+itm.EnchName;
-                    armornew.ObjectEffect.FormKey = itm.EnchKey;
-                    armornew.TemplateArmor.FormKey = armor.FormKey;
-                    state.PatchMod.Armors.Add(armornew);
+                    Armor test = state.PatchMod.Armors.AddNew();
+                    test.DeepCopyIn(armor);
+                    test.EditorID = armor.EditorID + " " + itm.Enchantment;
+                    test.Name = (Mutagen.Bethesda.Strings.TranslatedString?)armor.Name + itm.EnchName;
+                    test.ObjectEffect.FormKey = itm.EnchKey;
+                    test.TemplateArmor.FormKey = armor.FormKey;
+
+                    string lvllistname = "SublistEnch_" + armor.EditorID + itm.EnchLvl.ToString();
+                    var ee = enchantLists.Where(x => x.EditorID == lvllistname).SingleOrDefault();
                     
-                    /*if (armnew != null)
-                    {
-                        armnew.EditorID = armor.EditorID + "_" + itm.Enchantment;
-                        ObjectBounds objectBounds = new ObjectBounds();
-                        objectBounds = armor.ObjectBounds.DeepCopy();
-                        armnew.ObjectBounds = objectBounds;
-                        armnew.Name = armor.Name + " " + itm.EnchName;
-                        armnew.ObjectEffect.FormKey = itm.EnchKey;
-                        *//*Model model = new Model();
-                        SkyrimModelAssetType asset = new SkyrimModelAssetType();
-                        if(armor.WorldModel != null && armor.WorldModel.Male != null && armor.WorldModel.Male.Model !=null)
-                        {
-                            string ee = armor.WorldModel.Male.Model.File.DataRelativePath;
-                            model.File.SetPath(ee);
-                            
-                        }
-                        if (armor.WorldModel != null && armor.WorldModel.Female != null && armor.WorldModel.Female.Model != null)
-                        {
-                            string ee = armor.WorldModel.Female.Model.File.DataRelativePath;
-                            model.File.SetPath(ee);
+                    LeveledItemEntry enchantEntry = new LeveledItemEntry();
+                    LeveledItemEntryData enchantEntryData = new LeveledItemEntryData();
+                    enchantEntryData.Level = 1;
+                    enchantEntryData.Count = 1;
+                    enchantEntryData.Reference.FormKey = test.FormKey;
+                    enchantEntry.Data = enchantEntryData;
 
-                        }
-                        if (armnew.WorldModel != null && armnew.WorldModel.Male != null) {
-                            armnew.WorldModel.Male.Model = model;
-                        }
-                        if (armnew.WorldModel != null && armnew.WorldModel.Female != null)
-                        {
-                            armnew.WorldModel.Female.Model = model;
-                        }
+                    if (ee == null) {
+                        LeveledItem enchantOneList = state.PatchMod.LeveledItems.AddNew();
+                        enchantOneList.EditorID = lvllistname;
+                        ExtendedList<LeveledItemEntry> ff = new ExtendedList<LeveledItemEntry>();
+                        enchantOneList.Entries = ff;
+                        enchantOneList.Entries.Add(enchantEntry);
+                        enchantLists.Add(enchantOneList);
 
-                        BodyTemplate btemplate = new BodyTemplate();
-                        
-                        if (armor.BodyTemplate != null)
+                        string lvllistwhole = "LItemEnchArmor" + armval.ArmorClass + armval.BodyPart;
+                        var cont = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID == lvllistwhole).First();
+                        if (cont != null && cont.Entries != null)
                         {
-                            btemplate.FirstPersonFlags = armor.BodyTemplate.FirstPersonFlags;
-                            btemplate.Flags = armor.BodyTemplate.Flags;
-                            btemplate.ArmorType = armor.BodyTemplate.ArmorType;
+                            LeveledItem lli = cont.DeepCopy();
+                            LeveledItemEntry lle = new LeveledItemEntry();
+                            LeveledItemEntryData lled = new LeveledItemEntryData();
+                            lled.Count = 1;
+                            lled.Level = 1;
+                            lled.Reference.FormKey = enchantOneList.FormKey;
+                            lle.Data = lled;
+                            lli.Entries?.Add(lle);
+                            state.PatchMod.LeveledItems.Set(lli);
                         }
-                        armnew.BodyTemplate = btemplate;
-                        armnew.Race.FormKey = armor.Race.FormKey;
-                        if (armor.Keywords != null)
-                        {
-                            foreach (var key in armor.Keywords)
-                            {
-                                if (key != null && armnew.Keywords !=null)
-                                {         
-                                    armnew.Keywords.Add(key.FormKey);
-                                }
-                            }
-                        }
-                        armnew.ArmorRating = armor.ArmorRating;
-                        armnew.Value = armor.Value;
-                        float dd = armor.Weight;
-                        armnew.Weight = dd;*//*
-                        armnew.TemplateArmor.FormKey = armval.FormKey;
-                    }*/
+                    }
+                    else
+                    {                  
+                        ee.Entries?.Add(enchantEntry);
+                    }
                 } 
             } 
         }
@@ -523,7 +540,7 @@ namespace RequiemArmorAddTool
             var test2 = state.LoadOrder.Count;
             int index = state.LoadOrder.IndexOf(test);
             LoadOrder<ISkyrimModGetter> listing = new LoadOrder<ISkyrimModGetter>();
-            for (int i = index + 1; i < test2; i++)
+            for (int i = index + 1; i < test2-1; i++)
             {
                 var obj = state.LoadOrder.TryGetAtIndex(i);
                 if (obj != null && obj.Mod != null)
