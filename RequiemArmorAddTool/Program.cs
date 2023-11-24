@@ -18,6 +18,7 @@ using Mutagen.Bethesda.Skyrim.Assets;
 using System.Security.Cryptography;
 using Mutagen.Bethesda.Strings;
 using System.Reflection.Metadata.Ecma335;
+using CommandLine.Text;
 
 namespace RequiemArmorAddTool
 {
@@ -216,23 +217,6 @@ namespace RequiemArmorAddTool
                 .Run(args);
         }
 
-        /*public static bool CheckIfAlreadyExist(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, FormKey key) {
-
-            bool check = false;      
-            foreach (var item in state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides()) {
-                if (item.Entries != null)
-                {
-                    foreach (var entry in item.Entries)
-                    {
-                        if (entry.Data != null && entry.Data.Reference.FormKey == key) {
-                            return check;
-                        }
-                    }
-                }
-            }
-            return check;
-        }*/
-
         public static List<ArmorEnchantments> FillEnchantments(IPatcherState<ISkyrimMod, ISkyrimModGetter> state)
         {
             List<ArmorEnchantments> armList = new List<ArmorEnchantments>();
@@ -291,82 +275,12 @@ namespace RequiemArmorAddTool
             return armList;
         }
 
-        //Summary
-        //Iterate over armors discarding all the clothing, and then iterate over leveled item list to check if said armors are on the list, if they are populate hash list with armors on the list
-        /*public static HashSet<FormKey> PopulateArmorList(IPatcherState<ISkyrimMod, ISkyrimModGetter> state) {
-            string LeveledListPrefixName = "REQ_CLI_EquipSet_Bandit";
-            string LeveledListPrefixNameDragonborn = "FZR_CLI_EquipSet_Bandit";
-            HashSet<FormKey> tempArmors = new HashSet<FormKey>();
-            foreach (var armor in state.LoadOrder.PriorityOrder.Armor().WinningOverrides()) {
-                if (armor.BodyTemplate != null && armor.TemplateArmor.IsNull) {
-                    if (armor.BodyTemplate.ArmorType != ArmorType.Clothing) tempArmors.Add(armor.FormKey);
-                }
-            }
-            HashSet<FormKey> result = new HashSet<FormKey>();
-            foreach (var lvllist in state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides()) {
-                if(lvllist.Entries != null && lvllist.EditorID != null && (lvllist.EditorID.Contains(LeveledListPrefixName) || lvllist.EditorID.Contains(LeveledListPrefixNameDragonborn)))
-                {
-                    foreach (var entry in lvllist.Entries) {
-                        if (entry.Data != null && tempArmors.Contains(entry.Data.Reference.FormKey) && !result.Contains(entry.Data.Reference.FormKey)) {
-                            result.Add(entry.Data.Reference.FormKey);
-                        }
-                    }
-                }
-            }
-            return result;
-        }*/
+        public static void AddToListHelper(IPatcherState<ISkyrimMod, ISkyrimModGetter> state,List<string> lvliNames, ArmorValues armvalues, List<ArmorIncrement> keyValuePairs) {
 
-        public static void AddToLeveledItemList(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, ArmorValues armvalues) {
-            string LeveledListPrefixName = "REQ_CLI_EquipSet_Bandit" + armvalues.ArmorClass;
-            string LeveledListPrefixNameDragonborn = "FZR_CLI_EquipSet_Bandit" + armvalues.ArmorClass;
-
-            //Dictionary<string, List<int>> keyValuePairs = new Dictionary<string, List<int>>();
-
-            List<ArmorIncrement> keyValuePairs = new List<ArmorIncrement>
-            {
-                new ArmorIncrement("Helmet", "Light", new List<int> { 3, 6, 9, 12, 15, 18 }),
-                new ArmorIncrement("Helmet", "Heavy", new List<int> { 6, 12, 18, 24, 30, 36 }),
-                new ArmorIncrement("Cuirass", "Light", new List<int> { 15, 30, 45, 60, 75, 90 }),
-                new ArmorIncrement("Cuirass", "Heavy", new List<int> { 40, 80, 120, 160, 200, 240 }),
-                new ArmorIncrement("Gauntlets", "Light", new List<int> { 3, 5, 7, 9, 11, 13 }),
-                new ArmorIncrement("Gauntlets", "Heavy", new List<int> { 5, 10, 15, 20, 25, 30 }),
-                new ArmorIncrement("Boots", "Light", new List<int> { 3, 5, 7, 9, 11, 13 }),
-                new ArmorIncrement("Boots", "Heavy", new List<int> { 5, 10, 15, 20, 25, 30 })
-            };
-
-            List<string> lvliNames = new List<string>();
-            LeveledItemEntryData lvlData = new LeveledItemEntryData();
-            LeveledItemEntry lvlEnt = new LeveledItemEntry();
-            lvlData.Level = 1;
-            lvlData.Reference.SetTo(armvalues.FormKey);
-
-            var lvlin2 = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID != null && x.EditorID.Contains(armvalues.BodyPart) && x.EditorID.Contains(armvalues.ArmorClass) && !x.EditorID.Contains("1") && !x.EditorID.Contains("2") && !x.EditorID.Contains("3") && !x.EditorID.Contains("4") && !x.EditorID.Contains("5") && !x.EditorID.Contains("6") && !x.EditorID.Contains("Ench") && !x.EditorID.Contains("Imperial"));
-            foreach (var itm in lvlin2) {
-                var ll = itm.DeepCopy();
-                LeveledItemEntryData lld = new LeveledItemEntryData();
-                lld.Count = 1;
-                lld.Level = 1;
-                lld.Reference.FormKey = armvalues.FormKey;
-                LeveledItemEntry lle = new LeveledItemEntry();
-                lle.Data = lld;
-                ll.Entries?.Add(lle);
-                state.PatchMod.LeveledItems.Set(ll);
-            }
-
-
-            for (int i = 1; i <= 6; i++)
-            {
-                lvliNames.Add(LeveledListPrefixName + "_0" + i + "_" + armvalues.BodyPart);
-            }
-            for (int i = 1; i <= 6; i++)
-            {
-                lvliNames.Add(LeveledListPrefixNameDragonborn + "_0" + i + "_" + armvalues.BodyPart);
-            }
-            
-            for(int i = 0;i<lvliNames.Count;i++)
+            for (int i = 0; i < lvliNames.Count; i++)
             {
                 bool check = false;
-                var lvlin = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x=>x.EditorID == lvliNames[i]).First();
+                var lvlin = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID == lvliNames[i]).SingleOrDefault();
                 if (lvlin != null)
                 {
                     var temp = lvlin.DeepCopy();
@@ -381,31 +295,110 @@ namespace RequiemArmorAddTool
                                 itm.Data.Reference.TryResolve<IArmorGetter>(state.LinkCache, out var arm);
                                 if (arm != null)
                                 {
-                                    value += arm.ArmorRating*itm.Data.Count;
+                                    value += arm.ArmorRating * itm.Data.Count;
                                     nritems += itm.Data.Count;
                                 }
-
                             }
                         }
                         float average = value / nritems;
                         double itmnr = nritems * 0.1;
                         var result = keyValuePairs.Where(x => x.BodyPart == armvalues.BodyPart && x.ArmorClass == armvalues.ArmorClass).First();
-                        foreach(var arminc in result.Brackets)
+                        var result2 = result.Brackets[i];
+                        if (armvalues.ArmorValue < (average + result2) && armvalues.ArmorValue > (average - result2))
                         {
-                            if (armvalues.ArmorValue > (arminc + average))
+                            check = true;
+                        }
+                        if (check)
+                        {
+                            itmnr = (short)Math.Floor(itmnr);
+                            if (itmnr > 0)
                             {
-                                check = true;
-                                itmnr *= 0.75;
+                                LeveledItemEntryData lvlData = new LeveledItemEntryData();
+                                LeveledItemEntry lvlEnt = new LeveledItemEntry();
+                                lvlData.Level = 1;
+                                lvlData.Reference.SetTo(armvalues.FormKey);
+                                lvlData.Count = (short)Math.Floor(itmnr);
+                                lvlEnt.Data = lvlData;
+                                temp.Entries.Add(lvlEnt);
+                                state.PatchMod.LeveledItems.Set(temp);
                             }
                         }
-                        if(check)
-                        {
-                            lvlData.Count = (short)Math.Floor(itmnr);
-                            lvlEnt.Data = lvlData;
-                            temp.Entries.Add(lvlEnt);
-                            state.PatchMod.LeveledItems.Set(temp);
-                        }
                     }
+                }
+            }
+        }
+
+        public static void AddToLeveledItemList(IPatcherState<ISkyrimMod, ISkyrimModGetter> state, ArmorValues armvalues, IArmorGetter armor) {
+            string LeveledListPrefixName = "REQ_CLI_EquipSet_Bandit" + armvalues.ArmorClass;
+            string LeveledListPrefixNameDragonborn = "FZR_CLI_EquipSet_Bandit" + armvalues.ArmorClass;
+
+            //Dictionary<string, List<int>> keyValuePairs = new Dictionary<string, List<int>>();
+
+            List<ArmorIncrement> keyValuePairs = new List<ArmorIncrement>
+            {
+                new ArmorIncrement("Helmet", "Light", new List<int> { 4, 6, 10, 14, 18, 22 }),
+                new ArmorIncrement("Helmet", "Heavy", new List<int> { 8, 14, 20, 26, 32, 38 }),
+                new ArmorIncrement("Cuirass", "Light", new List<int> { 10, 16, 22, 28, 34, 40 }),
+                new ArmorIncrement("Cuirass", "Heavy", new List<int> { 30, 40, 50, 60, 70, 80 }),
+                new ArmorIncrement("Gauntlets", "Light", new List<int> { 2, 4, 6, 8, 10, 12 }),
+                new ArmorIncrement("Gauntlets", "Heavy", new List<int> { 4, 8, 12, 16, 20, 24 }),
+                new ArmorIncrement("Boots", "Light", new List<int> { 2, 4, 6, 8, 10, 12 }),
+                new ArmorIncrement("Boots", "Heavy", new List<int> { 4, 8, 12, 16, 20, 24 }),
+            };
+
+            List<string> lvliNames = new List<string>();
+            List<string> lvliNamesDragonborn = new List<string>();
+
+
+            //Add to standard non-indexed lists
+            var lvlin2 = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID != null && x.EditorID.Contains(armvalues.BodyPart) && x.EditorID.Contains(armvalues.ArmorClass) && !x.EditorID.Contains("1") && !x.EditorID.Contains("2") && !x.EditorID.Contains("3") && !x.EditorID.Contains("4") && !x.EditorID.Contains("5") && !x.EditorID.Contains("6") && !x.EditorID.Contains("Ench") && !x.EditorID.Contains("Imperial"));
+            foreach (var itm in lvlin2) {
+                var ll = itm.DeepCopy();
+                LeveledItemEntryData lld = new LeveledItemEntryData();
+                lld.Count = 1;
+                lld.Level = 1;
+                lld.Reference.FormKey = armvalues.FormKey;
+                LeveledItemEntry lle = new LeveledItemEntry();
+                lle.Data = lld;
+                ll.Entries?.Add(lle);
+                state.PatchMod.LeveledItems.Set(ll);
+            }
+
+            //Add to indexed lists
+            for (int i = 1; i <= 6; i++)
+            {
+                lvliNames.Add(LeveledListPrefixName + "_0" + i + "_" + armvalues.BodyPart);
+            }
+            for (int i = 1; i <= 6; i++)
+            {
+                lvliNamesDragonborn.Add(LeveledListPrefixNameDragonborn + "_0" + i + "_" + armvalues.BodyPart);
+            }
+
+            AddToListHelper(state, lvliNames, armvalues, keyValuePairs);
+            AddToListHelper(state, lvliNamesDragonborn, armvalues, keyValuePairs);
+
+            //Add quality variation items to leveled lists
+            
+            if(armor != null && armor.Name != null && armor.Name.String != null) { 
+                string prefix = "REQ_LI_Armor_";
+                string armName = armor.Name.String;
+                armName = String.Concat(armName.Where(c => !Char.IsWhiteSpace(c)));
+                short value = 1;
+                string[] keyw = {"const","fall","rise"};
+                for(int z = 0;z<keyw.Length;z++)
+                {
+                    string resultName = prefix + armName + "_Quality" + value.ToString() + "_N_" + keyw[z];
+                    ExtendedList<LeveledItemEntry> list = new ExtendedList<LeveledItemEntry>();
+                    LeveledItemEntry lle = new LeveledItemEntry();
+                    LeveledItemEntryData lld = new LeveledItemEntryData();
+                    lld.Count = 1;
+                    lld.Level = 1;
+                    lld.Reference.FormKey = armvalues.FormKey;
+                    lle.Data = lld;
+                    list.Add(lle);
+                    var lli = state.PatchMod.LeveledItems.AddNew();
+                    lli.Entries = list;
+                    lli.EditorID = resultName;
                 }
             }
         }
@@ -444,7 +437,7 @@ namespace RequiemArmorAddTool
                         enchantLists.Add(enchantOneList);
 
                         string lvllistwhole = "LItemEnchArmor" + armval.ArmorClass + armval.BodyPart;
-                        var cont = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID == lvllistwhole).First();
+                        var cont = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID == lvllistwhole).SingleOrDefault();
                         if (cont != null && cont.Entries != null)
                         {
                             LeveledItem lli = cont.DeepCopy();
@@ -485,32 +478,32 @@ namespace RequiemArmorAddTool
                         keyword.TryResolveIdentifier(state.LinkCache, out var identifier);
                         if (identifier != null)
                         {
-                            if (identifier.Contains("Light"))
+                            if (identifier.Equals("ArmorLight"))
                             {
                                 armorclass = "Light";
                                 count++;
                             }
-                            if (identifier.Contains("Heavy"))
+                            if (identifier.Equals("ArmorHeavy"))
                             {
                                 armorclass = "Heavy";
                                 count++;
                             }
-                            if (identifier.Contains("Helmet"))
+                            if (identifier.Equals("ArmorHelmet"))
                             {
                                 bodypart = "Helmet";
                                 count++;
                             }
-                            if (identifier.Contains("Boots"))
+                            if (identifier.Equals("ArmorBoots"))
                             {
                                 bodypart = "Boots";
                                 count++;
                             }
-                            if (identifier.Contains("Cuirass"))
+                            if (identifier.Equals("ArmorCuirass"))
                             {
                                 bodypart = "Cuirass";
                                 count++;
                             }
-                            if (identifier.Contains("Gauntlets"))
+                            if (identifier.Equals("ArmorGauntlets"))
                             {
                                 bodypart = "Gauntlets";
                                 count++;
@@ -560,7 +553,7 @@ namespace RequiemArmorAddTool
                     var armorval = CheckArmorValues(state, armor);
                     if(armorval != null)
                     {
-                        AddToLeveledItemList(state, armorval);
+                        AddToLeveledItemList(state, armorval, armor);
                         AddToEnchantedLists(state, enchList, armorval, armor);
                     }
                 }
