@@ -1,0 +1,1 @@
+Tool that patches new armors so that they are compatible with requiem mod. Move your armor mod plugins in your load order after requiem plugins. It will add enchanted versions of armor and add them to leveled lists. 
