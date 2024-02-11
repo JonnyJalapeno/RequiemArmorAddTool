@@ -351,7 +351,7 @@ namespace RequiemArmorAddTool
 
 
             //Add to standard non-indexed lists
-            var lvlin2 = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID != null && x.EditorID.Contains(armvalues.BodyPart) && x.EditorID.Contains(armvalues.ArmorClass) && !x.EditorID.Contains("1") && !x.EditorID.Contains("2") && !x.EditorID.Contains("3") && !x.EditorID.Contains("4") && !x.EditorID.Contains("5") && !x.EditorID.Contains("6") && !x.EditorID.Contains("Ench") && !x.EditorID.Contains("Imperial"));
+            var lvlin2 = state.LoadOrder.PriorityOrder.LeveledItem().WinningOverrides().Where(x => x.EditorID != null && x.EditorID.Contains(armvalues.BodyPart) && x.EditorID.Contains(armvalues.ArmorClass) && !x.EditorID.Contains("1") && !x.EditorID.Contains("2") && !x.EditorID.Contains("3") && !x.EditorID.Contains("4") && !x.EditorID.Contains("5") && !x.EditorID.Contains("6") && !x.EditorID.Contains("Ench") && !x.EditorID.Contains("Imperial") && !x.EditorID.Contains("Stormcloak"));
             foreach (var itm in lvlin2) {
                 var ll = itm.DeepCopy();
                 LeveledItemEntryData lld = new LeveledItemEntryData();
